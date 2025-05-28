@@ -1,0 +1,198 @@
+import torch
+import torch.nn as nn
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
+from typing import Dict, Optional, List, Union, Any
+
+class MedicalLanguageDecoder(nn.Module):
+    """Language decoder for medical report generation"""
+    
+    def __init__(self,
+                 model_name: str = 'microsoft/DialoGPT-medium',
+                 vocab_size: int = 50257,
+                 max_length: int = 512,
+                 lora_r: int = 16,
+                 lora_alpha: int = 32,
+                 lora_dropout: float = 0.1):
+        """
+        Args:
+            model_name: Name of the base language model
+            vocab_size: Vocabulary size
+            max_length: Maximum sequence length
+            lora_r: LoRA rank
+            lora_alpha: LoRA alpha
+            lora_dropout: LoRA dropout
+        """
+        super().__init__()
+        
+        # Load tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        
+        # Quantization config for efficiency
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
+        
+        # Load language model
+        self.language_model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            device_map="auto"
+        )
+        
+        # Vision-to-text projection
+        self.vision_projection = nn.Sequential(
+            nn.Linear(768, 1024),
+            nn.GELU(),
+            nn.LayerNorm(1024),
+            nn.Linear(1024, self.language_model.config.n_embd)
+        )
+        
+        # Medical knowledge embeddings
+        self.medical_embeddings = self._init_medical_embeddings()
+        
+        # LoRA for efficient fine-tuning
+        lora_config = LoraConfig(
+            r=lora_r,
+            lora_alpha=lora_alpha,
+            target_modules=["c_attn", "c_proj"],
+            lora_dropout=lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM"
+        )
+        
+        self.language_model = get_peft_model(self.language_model, lora_config)
+    
+    def _init_medical_embeddings(self, vocab_size: int = 10000) -> nn.Embedding:
+        """Initialize medical concept embeddings
+        
+        Args:
+            vocab_size: Size of medical vocabulary
+        
+        Returns:
+            Medical concept embeddings
+        """
+        return nn.Embedding(vocab_size, 768)
+    
+    def forward(self,
+                visual_features: torch.Tensor,
+                text_input_ids: Optional[torch.Tensor] = None,
+                attention_mask: Optional[torch.Tensor] = None,
+                labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+        """
+        Args:
+            visual_features: Visual features from encoder (B, N, D)
+            text_input_ids: Input text token IDs
+            attention_mask: Attention mask for text
+            labels: Labels for text generation
+        
+        Returns:
+            Dictionary containing model outputs
+        """
+        batch_size = visual_features.shape[0]
+        
+        # Project visual features to language space
+        visual_tokens = self.vision_projection(visual_features)  # [B, N, n_embd]
+        
+        if text_input_ids is not None:
+            # Training mode - teacher forcing
+            text_embeddings = self.language_model.get_input_embeddings()(text_input_ids)
+            
+            # Concatenate visual and text embeddings
+            combined_embeddings = torch.cat([visual_tokens, text_embeddings], dim=1)
+            
+            # Create attention mask for combined input
+            visual_attention = torch.ones(
+                batch_size, visual_tokens.shape[1],
+                device=visual_tokens.device
+            )
+            combined_attention = torch.cat([visual_attention, attention_mask], dim=1)
+            
+            # Forward pass through language model
+            outputs = self.language_model(
+                inputs_embeds=combined_embeddings,
+                attention_mask=combined_attention,
+                labels=labels
+            )
+            
+            return {
+                'loss': outputs.loss,
+                'logits': outputs.logits,
+                'hidden_states': outputs.hidden_states
+            }
+        else:
+            # Inference mode - autoregressive generation
+            return self.generate_explanation(visual_tokens)
+    
+    @torch.no_grad()
+    def generate_explanation(self,
+                           visual_tokens: torch.Tensor,
+                           max_length: int = 200,
+                           num_beams: int = 4,
+                           temperature: float = 0.7,
+                           top_p: float = 0.9) -> Dict[str, Any]:
+        """Generate medical explanation from visual features
+        
+        Args:
+            visual_tokens: Visual features in language space
+            max_length: Maximum generation length
+            num_beams: Number of beams for beam search
+            temperature: Sampling temperature
+            top_p: Nucleus sampling probability
+        
+        Returns:
+            Dictionary containing generated text and metadata
+        """
+        # Start with visual tokens as context
+        current_embeddings = visual_tokens
+        
+        # Generate text using beam search
+        outputs = self.language_model.generate(
+            inputs_embeds=current_embeddings,
+            max_length=max_length,
+            num_beams=num_beams,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=True,
+            no_repeat_ngram_size=3,
+            early_stopping=True
+        )
+        
+        # Decode generated tokens
+        generated_text = self.tokenizer.batch_decode(
+            outputs, skip_special_tokens=True
+        )
+        
+        return {
+            'explanations': generated_text,
+            'tokens': outputs
+        }
+    
+    def encode_text(self, text: Union[str, List[str]]) -> Dict[str, torch.Tensor]:
+        """Encode text using tokenizer
+        
+        Args:
+            text: Input text or list of texts
+        
+        Returns:
+            Dictionary containing encoded text
+        """
+        if isinstance(text, str):
+            text = [text]
+        
+        encoding = self.tokenizer(
+            text,
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        )
+        
+        return {
+            'input_ids': encoding['input_ids'],
+            'attention_mask': encoding['attention_mask']
+        } 
