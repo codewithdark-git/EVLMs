@@ -10,8 +10,8 @@ from tqdm import tqdm
 import logging
 from typing import Dict, Any, Optional
 
-from .utils.metrics import calculate_metrics, calculate_language_metrics
-from .utils.logger import log_metrics
+from EVLMs.utils.metrics import calculate_metrics, calculate_language_metrics
+from EVLMs.utils.logger import log_metrics
 
 class MedicalVLMTrainer:
     """Trainer for medical vision-language model"""
