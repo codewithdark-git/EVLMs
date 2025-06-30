@@ -142,8 +142,8 @@ class MedicalImageTextDataset(Dataset):
         image = self._load_image(image_data)
         
         if self.transform:
-            image = self.transform(image)
-            
+            image = self.transform(image=image)["image"]
+        
         # Get text
         text = item[self.config.hf_config.text_column]
         text_encodings = self._process_text(text)
