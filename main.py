@@ -102,8 +102,8 @@ def main():
     # Initialize trainer
     trainer = MedicalVLMTrainer(
         model=model,
-        train_dataset=train_loader,
-        val_dataset=val_loader,
+        train_dataset=train_dataset,  # FIX: pass dataset, not DataLoader
+        val_dataset=val_dataset,      # FIX: pass dataset, not DataLoader
         learning_rate=config.learning_rate,
         batch_size=config.batch_size,
         num_epochs=config.num_epochs,
@@ -120,4 +120,4 @@ def main():
         wandb.finish()
 
 if __name__ == "__main__":
-    main() 
+    main()
