@@ -102,8 +102,8 @@ def main():
     # Initialize trainer
     trainer = MedicalVLMTrainer(
         model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
+        train_dataset=train_loader,
+        val_dataset=val_loader,
         learning_rate=config.learning_rate,
         num_epochs=config.num_epochs,
         device=device,
