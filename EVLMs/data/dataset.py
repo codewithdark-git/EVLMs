@@ -108,24 +108,27 @@ class MedicalImageTextDataset(Dataset):
             
         return torch.tensor(labels, dtype=torch.float32)
     
-    def _load_image(self, image_path: str) -> Image.Image:
+    def _load_image(self, image_path) -> Image.Image:
         """Load and preprocess image"""
         try:
+            # If already a PIL Image, return as is
+            if isinstance(image_path, Image.Image):
+                image = image_path
             # Handle both local paths and URLs
-            if image_path.startswith(('http://', 'https://')):
-                # If image is a URL (some HF datasets provide URLs)
-                response = requests.get(image_path)
-                image = Image.open(BytesIO(response.content))
+            elif isinstance(image_path, str):
+                if image_path.startswith(('http://', 'https://')):
+                    response = requests.get(image_path)
+                    image = Image.open(BytesIO(response.content))
+                else:
+                    image = Image.open(image_path)
             else:
-                # If image is a local path
-                image = Image.open(image_path)
-                
+                raise ValueError(f"Unsupported image_path type: {type(image_path)}")
+            
             # Convert to RGB if needed
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-                
             return image
-            
+
         except Exception as e:
             logger.error(f"Error loading image {image_path}: {str(e)}")
             raise
@@ -230,4 +233,4 @@ def create_sample_dataset(output_path: str, num_samples: int = 1000):
     df = pd.DataFrame(data)
     df.to_csv(output_path, index=False)
     
-    return df 
+    return df

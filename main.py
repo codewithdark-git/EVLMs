@@ -72,22 +72,22 @@ def main():
         transform=get_transforms(config.image_size, is_training=False)
     )
     
-    # Create data loaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True
-    )
+    # # Create data loaders
+    # train_loader = DataLoader(
+    #     train_dataset,
+    #     batch_size=config.batch_size,
+    #     shuffle=True,
+    #     num_workers=4,
+    #     pin_memory=True
+    # )
     
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config.batch_size,
-        shuffle=False,
-        num_workers=4,
-        pin_memory=True
-    )
+    # val_loader = DataLoader(
+    #     val_dataset,
+    #     batch_size=config.batch_size,
+    #     shuffle=False,
+    #     num_workers=4,
+    #     pin_memory=True
+    # )
     
     logger.info(f"Train dataset size: {len(train_dataset)}")
     logger.info(f"Val dataset size: {len(val_dataset)}")
