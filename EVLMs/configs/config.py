@@ -87,8 +87,20 @@ class Config:
         # Initialize dataset configurations
         self.datasets = {
             DatasetName.CHEXPERT: DatasetConfig(
+                name=DatasetName.CHEXPERT,
+                data_dir="data/CheXpert-v1.0",
+                train_csv="train.csv",
+                val_csv="valid.csv",
+                image_column="Path",
+                text_column="Report Impression",
+                label_columns=[
+                    'No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly',
+                    'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation',
+                    'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion',
+                    'Pleural Other', 'Fracture', 'Support Devices'
+                ],
                 hf_config=HFDatasetConfig(
-                    name="stanfordmlgroup/chexpert",
+                    name="danjacobellis/chexpert",
                     image_column="image",
                     text_column="report",
                     split_mapping={
@@ -98,6 +110,19 @@ class Config:
                 )
             ),
             DatasetName.MIMIC_CXR: DatasetConfig(
+                name=DatasetName.MIMIC_CXR,
+                data_dir="data/MIMIC-CXR",
+                train_csv="train/train.csv",
+                val_csv="valid/valid.csv",
+                test_csv="test/test.csv",
+                image_column="dicom_id",
+                text_column="report",
+                label_columns=[
+                    'No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly',
+                    'Airspace Opacity', 'Lung Lesion', 'Edema', 'Consolidation',
+                    'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion',
+                    'Pleural Other', 'Fracture', 'Support Devices'
+                ],
                 hf_config=HFDatasetConfig(
                     name="medicalai/mimic-cxr",
                     image_column="image",
@@ -110,6 +135,19 @@ class Config:
                 )
             ),
             DatasetName.NIH_CHEST: DatasetConfig(
+                name=DatasetName.NIH_CHEST,
+                data_dir="data/NIH-Chest-Xray",
+                train_csv="train_list.txt",
+                val_csv="val_list.txt",
+                test_csv="test_list.txt",
+                image_column="Image Index",
+                text_column="Finding Labels",
+                label_columns=[
+                    'Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration',
+                    'Mass', 'Nodule', 'Pneumonia', 'Pneumothorax', 'Consolidation',
+                    'Edema', 'Emphysema', 'Fibrosis', 'Pleural_Thickening', 
+                    'Hernia'
+                ],
                 hf_config=HFDatasetConfig(
                     name="alkzar90/NIH-Chest-X-ray14",
                     image_column="image",
@@ -156,4 +194,4 @@ def get_config(dataset_name: str = DatasetName.CHEXPERT) -> Config:
     # Update number of classes based on dataset
     config.num_classes = len(config.datasets[dataset_name].label_columns)
     
-    return config 
+    return config
