@@ -142,7 +142,8 @@ class MedicalImageTextDataset(Dataset):
         image = self._load_image(image_data)
         
         if self.transform:
-            image = self.transform(image=image)["image"]
+            import numpy as np
+            image = self.transform(image=np.array(image))["image"]
         
         # Get text
         text = item[self.config.hf_config.text_column]
@@ -158,7 +159,7 @@ class MedicalImageTextDataset(Dataset):
         
         if labels is not None:
             output["labels"] = labels
-            
+        
         return output
     
     def __len__(self) -> int:
