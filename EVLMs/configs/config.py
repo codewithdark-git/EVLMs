@@ -80,7 +80,7 @@ class Config:
     logging_steps: int = 100
     
     # Experiment tracking
-    use_wandb: bool = True
+    use_wandb: bool = False
     experiment_name: Optional[str] = None
     
     def __post_init__(self):
