@@ -105,11 +105,11 @@ def main():
         train_dataset=train_loader,
         val_dataset=val_loader,
         learning_rate=config.learning_rate,
+        batch_size=config.batch_size,
         num_epochs=config.num_epochs,
         device=device,
         output_dir=config.output_dir,
-        logger=logger,
-        config=config
+        logger=logger
     )
     
     # Start training
