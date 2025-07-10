@@ -29,7 +29,7 @@ class MedicalVisionEncoder(nn.Module):
         # Medical-specific adaptations
         self.medical_adapter = nn.Sequential(
             nn.Conv2d(1024, 768, 1),  # Adapt to CLIP dimensions
-            nn.LayerNorm(768),
+            nn.BatchNorm2d(768),
             nn.GELU(),
             nn.Dropout(0.1)
         )
@@ -64,9 +64,6 @@ class MedicalVisionEncoder(nn.Module):
         features = self.backbone.forward_features(x)  # [B, 49, 1024]
         
         # Apply medical adapter
-        B, N, C = features.shape
-        H = W = int(N**0.5)  # Assuming square patches
-        features = features.transpose(1, 2).reshape(B, C, H, W)
         features = self.medical_adapter(features)
         
         # Multi-scale processing
