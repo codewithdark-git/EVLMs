@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class DatasetConfig:
     """Configuration for a local dataset from a single JSON file."""
     data_dir: str  # Path to the root of the dataset, where images are located.
-    json_filename: str = "datasets.json"  # Name of the JSON file
+    json_filename: str = "/kaggle/input/report/enhanced_reports_with_radiology (1).json"  # Name of the JSON file
     val_split: float = 0.2  # Fraction for the validation split
     label_columns: List[str] = field(default_factory=lambda: [
         'Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema',
