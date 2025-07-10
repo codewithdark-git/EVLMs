@@ -64,6 +64,7 @@ class MedicalVisionEncoder(nn.Module):
         features = self.backbone.forward_features(x)  # [B, 49, 1024]
         
         # Apply medical adapter
+        features = features.permute(0, 3, 1, 2)
         features = self.medical_adapter(features)
         
         # Multi-scale processing
