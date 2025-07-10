@@ -4,108 +4,58 @@ This guide will help you set up and start using the Explainable Vision-Language 
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/ExplainableVisionLanguageModels-EVLMs.git
-cd ExplainableVisionLanguageModels-EVLMs
-```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/yourusername/ExplainableVisionLanguageModels-EVLMs.git
+    cd ExplainableVisionLanguageModels-EVLMs
+    ```
 
-2. Create a virtual environment (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+2.  Create a virtual environment (recommended):
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## Basic Usage
 
-### 1. Training with a Predefined Dataset
+### 1. Prepare Your Dataset
 
-```python
-from EVLMs.configs.config import get_config, DatasetName
-from EVLMs.data.dataset import MedicalImageTextDataset
-from transformers import AutoTokenizer
+Before you can start training, you must prepare your dataset as described in the [Working with Datasets](datasets.md) guide. You will need a root directory containing your `datasets.json` file and all the associated images.
 
-# Get configuration for CheXpert dataset
-config = get_config(DatasetName.CHEXPERT)
+### 2. Running Training
 
-# Initialize tokenizer
-tokenizer = AutoTokenizer.from_pretrained(config.language_model_name)
-tokenizer.pad_token = tokenizer.eos_token
+To train the model, run the `main.py` script and provide the path to your dataset directory using the `--dataset_path` argument.
 
-# Create dataset
-dataset = MedicalImageTextDataset(
-    dataset_config=config.datasets[config.dataset_name],
-    tokenizer=tokenizer,
-    split="train"
-)
+```bash
+python main.py --dataset_path /path/to/your/dataset
 ```
 
-### 2. Training with a Custom Dataset
+This single command will handle:
+-   Loading the configuration.
+-   Initializing the model, tokenizer, and trainer.
+-   Creating the training and validation datasets from your `datasets.json` file.
+-   Starting the training process.
 
-```python
-from EVLMs.configs.config import Config, DatasetConfig, DatasetName
+### 3. Generating Explanations
 
-# Create custom dataset configuration
-custom_config = Config(
-    dataset_name=DatasetName.CUSTOM,
-    datasets={
-        DatasetName.CUSTOM: DatasetConfig(
-            name=DatasetName.CUSTOM,
-            data_dir="path/to/your/data",
-            train_csv="train.csv",
-            val_csv="val.csv",
-            image_column="image_path",
-            text_column="report_text",
-            label_columns=[
-                'Finding1', 'Finding2', 'Finding3'
-            ]
-        )
-    }
-)
-
-# Create dataset
-custom_dataset = MedicalImageTextDataset(
-    dataset_config=custom_config.datasets[DatasetName.CUSTOM],
-    tokenizer=tokenizer,
-    split="train"
-)
-```
-
-### 3. Running Training
+After training, you can use the saved model to generate explanations for your images.
 
 ```python
 from EVLMs.models.medical_vlm import ExplainableMedicalVLM
-from EVLMs.trainers.trainer import MedicalVLMTrainer
-
-# Initialize model
-model = ExplainableMedicalVLM(
-    vision_model=config.vision_model_name,
-    language_model=config.language_model_name,
-    num_classes=config.num_classes
-)
-
-# Initialize trainer
-trainer = MedicalVLMTrainer(
-    model=model,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    learning_rate=config.learning_rate,
-    num_epochs=config.num_epochs
-)
-
-# Start training
-trainer.train()
-```
-
-### 4. Generating Explanations
-
-```python
 from EVLMs.visualization.explanation_generator import ExplanationGenerator
+
+# Load your trained model
+model = ExplainableMedicalVLM(
+    vision_model='microsoft/swin-base-patch4-window7-224',
+    language_model='microsoft/DialoGPT-medium',
+    num_classes=14  # Make sure this matches your dataset
+)
+model.load_state_dict(torch.load('path/to/your/best_model.pth'))
 
 # Initialize explanation generator
 explainer = ExplanationGenerator(model)
@@ -122,35 +72,14 @@ explanation.show()
 
 ## Configuration
 
-The framework uses a configuration system to manage model parameters, dataset settings, and training options. You can customize these settings in several ways:
+The framework uses a configuration system based on dataclasses to manage model parameters, dataset settings, and training options. The core configurations are automatically handled when you run `main.py`.
 
-1. Using predefined configurations:
-```python
-config = get_config(DatasetName.CHEXPERT)
-```
-
-2. Modifying existing configurations:
-```python
-config.batch_size = 16
-config.learning_rate = 1e-4
-```
-
-3. Creating custom configurations:
-```python
-from EVLMs.configs.config import Config
-
-custom_config = Config(
-    vision_model_name="microsoft/swin-base-patch4-window7-224",
-    language_model_name="microsoft/DialoGPT-medium",
-    batch_size=8,
-    learning_rate=5e-5
-)
-```
+If you need to customize settings like the batch size, learning rate, or model names, you can do so by modifying the `Config` and `DatasetConfig` classes in `EVLMs/configs/config.py`.
 
 ## Next Steps
 
-- Learn more about [available datasets](datasets.md)
-- Understand the [model architecture](model_architecture.md)
-- Explore [training options](training.md)
-- Check out [visualization tools](visualization.md)
-- See [example notebooks](../examples/README.md) 
+-   Learn more about the [dataset format](datasets.md).
+-   Understand the [model architecture](model_architecture.md).
+-   Explore [training options](training.md).
+-   Check out the [visualization tools](visualization.md).
+ 

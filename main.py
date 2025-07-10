@@ -1,11 +1,11 @@
 import os
 import torch
-from torch.utils.data import DataLoader
+import argparse
 import wandb
 from EVLMs.models.medical_vlm import ExplainableMedicalVLM
 from EVLMs.data.dataset import MedicalImageTextDataset
 from EVLMs.trainers.trainer import MedicalVLMTrainer
-from EVLMs.configs.config import get_config, DatasetName
+from EVLMs.configs.config import Config, DatasetConfig
 from EVLMs.utils.logger import setup_logging
 from transformers import AutoTokenizer
 import albumentations as A
@@ -30,8 +30,14 @@ def get_transforms(img_size: int, is_training: bool = True):
         ])
 
 def main():
-    # Load configuration
-    config = get_config(DatasetName.CHEXPERT)
+    parser = argparse.ArgumentParser(description="Train an Explainable Medical VLM.")
+    parser.add_argument("--dataset_path", type=str, required=True, 
+                        help="Path to the root directory of the dataset.")
+    args = parser.parse_args()
+
+    # Create dataset and base configuration
+    dataset_config = DatasetConfig(data_dir=args.dataset_path)
+    config = Config(dataset=dataset_config)
     
     # Setup logging
     logger = setup_logging(config.output_dir)
@@ -55,39 +61,20 @@ def main():
     
     # Create datasets with transforms
     train_dataset = MedicalImageTextDataset(
-        dataset_config=config.datasets[config.dataset_name],
+        dataset_config=config.dataset,
         tokenizer=tokenizer,
         split="train",
         max_length=config.max_text_length,
-        img_size=config.image_size,
         transform=get_transforms(config.image_size, is_training=True)
     )
     
     val_dataset = MedicalImageTextDataset(
-        dataset_config=config.datasets[config.dataset_name],
+        dataset_config=config.dataset,
         tokenizer=tokenizer,
         split="val",
         max_length=config.max_text_length,
-        img_size=config.image_size,
         transform=get_transforms(config.image_size, is_training=False)
     )
-    
-    # # Create data loaders
-    # train_loader = DataLoader(
-    #     train_dataset,
-    #     batch_size=config.batch_size,
-    #     shuffle=True,
-    #     num_workers=4,
-    #     pin_memory=True
-    # )
-    
-    # val_loader = DataLoader(
-    #     val_dataset,
-    #     batch_size=config.batch_size,
-    #     shuffle=False,
-    #     num_workers=4,
-    #     pin_memory=True
-    # )
     
     logger.info(f"Train dataset size: {len(train_dataset)}")
     logger.info(f"Val dataset size: {len(val_dataset)}")
@@ -102,8 +89,8 @@ def main():
     # Initialize trainer
     trainer = MedicalVLMTrainer(
         model=model,
-        train_dataset=train_dataset,  # FIX: pass dataset, not DataLoader
-        val_dataset=val_dataset,      # FIX: pass dataset, not DataLoader
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
         learning_rate=config.learning_rate,
         batch_size=config.batch_size,
         num_epochs=config.num_epochs,

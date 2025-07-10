@@ -1,243 +1,122 @@
 # Working with Datasets
 
-This guide explains how to work with different datasets in the EVLMs framework, including predefined medical datasets and custom datasets.
-
-## Supported Datasets
-
-### 1. CheXpert Dataset
-- **Source**: Stanford ML Group
-- **Size**: 224,316 chest radiographs of 65,240 patients
-- **Labels**: 14 medical conditions
-- **Features**: 
-  - High-quality chest X-rays
-  - Detailed radiology reports
-  - Hierarchical label structure
-
-```python
-from EVLMs.configs.config import get_config, DatasetName
-
-config = get_config(DatasetName.CHEXPERT)
-```
-
-### 2. MIMIC-CXR Dataset
-- **Source**: PhysioNet
-- **Size**: 377,110 chest X-rays with 227,827 imaging studies
-- **Labels**: 14 medical conditions
-- **Features**:
-  - Free-text radiology reports
-  - Multiple views per study
-  - Temporal information
-
-```python
-config = get_config(DatasetName.MIMIC_CXR)
-```
-
-### 3. NIH Chest X-ray Dataset
-- **Source**: National Institutes of Health
-- **Size**: 112,120 X-ray images from 30,805 patients
-- **Labels**: 14 disease categories
-- **Features**:
-  - Disease location information
-  - Multiple disease labels
-  - Demographic information
-
-```python
-config = get_config(DatasetName.NIH_CHEST)
-```
+This guide explains how to structure and use your local dataset with the EVLMs framework. The system is designed to work with a specific JSON format that links images to their corresponding radiology reports and labels.
 
 ## Dataset Structure
 
-Each dataset should follow this structure:
+To use the framework, you must organize your data in the following structure. The root directory should contain your `datasets.json` file and the images, which can be in any subdirectory.
 
 ```
-dataset_root/
-├── train.csv
-├── val.csv
-├── test.csv (optional)
-└── images/
-    ├── image1.jpg
-    ├── image2.jpg
-    └── ...
+/path/to/your/dataset/
+├── datasets.json
+└── ... any other folders with images ...
 ```
 
-### CSV Format
+### `datasets.json` Format
 
-The CSV files should contain the following columns:
-- Image path/identifier
-- Report text
-- Labels (0/1 for each condition)
+The `datasets.json` file is the core of your dataset. It should be a JSON object with a single key, `"enhanced_reports"`, which holds a list of report objects. Each object in the list represents a single data point and must contain the following keys:
 
-Example:
-```csv
-image_path,report_text,label1,label2,...
-images/001.jpg,"Normal chest x-ray...",0,1,...
+-   `"image_path"`: The absolute path to the image file.
+-   `"labels"`: A list of strings, where each string is a finding or condition present in the image.
+-   `"radiology_report"`: An object containing the text of the report, with the following keys:
+    -   `"findings"`: The findings section of the report.
+    -   `"impression"`: The impression or conclusion of the report.
+    -   `"recommendations"`: Any recommendations for follow-up.
+
+Here is an example of a single entry in the `"enhanced_reports"` list:
+
+```json
+{
+  "image_path": "/path/to/your/dataset/images/00006763_000.png",
+  "labels": [
+    "No Finding"
+  ],
+  "radiology_report": {
+    "findings": "The examination demonstrates normal cardiopulmonary findings...",
+    "impression": "Normal chest radiograph with no acute cardiopulmonary findings.",
+    "recommendations": "No acute intervention needed."
+  }
+}
 ```
 
-## Using Predefined Datasets
+## Using Your Dataset
 
-1. Basic Usage:
+The framework is designed to automatically load and process your `datasets.json` file. When you run the training script, you simply need to point to the root directory of your dataset.
+
+### 1. Configuration
+
+The `DatasetConfig` is now simplified to work with the JSON format. You only need to provide the path to your data directory.
+
+```python
+from EVLMs.configs.config import Config, DatasetConfig
+
+# The configuration is handled automatically when you run main.py
+# This is just for illustration
+dataset_config = DatasetConfig(data_dir="path/to/your/dataset")
+config = Config(dataset=dataset_config)
+```
+
+### 2. Loading the Dataset
+
+The `MedicalImageTextDataset` class will automatically handle loading the `datasets.json` file, splitting it into training and validation sets, and processing the data.
+
 ```python
 from EVLMs.data.dataset import MedicalImageTextDataset
 from transformers import AutoTokenizer
 
-# Get dataset configuration
-config = get_config(DatasetName.CHEXPERT)
-
-# Initialize tokenizer
-tokenizer = AutoTokenizer.from_pretrained(config.language_model_name)
-
-# Create dataset
+# This is handled internally by the training script
+tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
 dataset = MedicalImageTextDataset(
-    dataset_config=config.datasets[config.dataset_name],
+    dataset_config=config.dataset,
     tokenizer=tokenizer,
     split="train"
 )
 ```
 
-2. With Custom Transforms:
+### 3. Applying Custom Transforms
+
+You can still apply custom image augmentations. The transforms are defined in `main.py` and passed to the `MedicalImageTextDataset`.
+
 ```python
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+# Example of transforms used in the project
 transforms = A.Compose([
     A.Resize(224, 224),
     A.HorizontalFlip(p=0.5),
     A.RandomBrightnessContrast(p=0.2),
-    A.Normalize(),
+    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ToTensorV2()
 ])
 
+# The trainer will pass these transforms to the dataset
 dataset = MedicalImageTextDataset(
-    dataset_config=config.datasets[config.dataset_name],
+    dataset_config=config.dataset,
     tokenizer=tokenizer,
     split="train",
     transform=transforms
 )
 ```
 
-## Using Custom Datasets
-
-1. Prepare Your Dataset:
-   - Organize your images and labels as described above
-   - Create CSV files with required columns
-
-2. Create Custom Configuration:
-```python
-from EVLMs.configs.config import Config, DatasetConfig, DatasetName
-
-custom_config = Config(
-    dataset_name=DatasetName.CUSTOM,
-    datasets={
-        DatasetName.CUSTOM: DatasetConfig(
-            name=DatasetName.CUSTOM,
-            data_dir="path/to/your/data",
-            train_csv="train.csv",
-            val_csv="val.csv",
-            image_column="image_path",
-            text_column="report_text",
-            label_columns=[
-                'Condition1', 'Condition2', 'Condition3'
-            ]
-        )
-    }
-)
-```
-
-3. Use Custom Dataset:
-```python
-dataset = MedicalImageTextDataset(
-    dataset_config=custom_config.datasets[DatasetName.CUSTOM],
-    tokenizer=tokenizer,
-    split="train"
-)
-```
-
-## Using Hugging Face Datasets
-
-The framework supports loading datasets directly from the Hugging Face Hub:
-
-1. Configure HF Dataset:
-```python
-from EVLMs.configs.config import HFDatasetConfig
-
-hf_config = HFDatasetConfig(
-    name="your/dataset",
-    image_column="image",
-    text_column="text",
-    split_mapping={
-        "train": "train",
-        "val": "validation"
-    }
-)
-```
-
-2. Use in Dataset Config:
-```python
-dataset_config = DatasetConfig(
-    name=DatasetName.CUSTOM,
-    data_dir="cache/dir",
-    train_csv="train.csv",
-    val_csv="val.csv",
-    hf_config=hf_config
-)
-```
-
 ## Data Preprocessing
 
 The framework automatically handles:
-- Image resizing and augmentation
-- Text tokenization
-- Label processing
-- Missing value handling
-
-You can customize preprocessing by:
-1. Modifying transforms
-2. Adjusting tokenizer settings
-3. Implementing custom preprocessing methods
+-   Parsing the `datasets.json` file.
+-   Splitting the data into training and validation sets.
+-   Combining the `findings`, `impression`, and `recommendations` fields into a single report for the language model.
+-   One-hot encoding the `labels` for multi-label classification.
+-   Applying image augmentations and normalization.
+-   Tokenizing the text for the language model.
 
 ## Best Practices
 
-1. **Data Organization**:
-   - Keep consistent directory structure
-   - Use meaningful file names
-   - Include metadata in CSV files
-
-2. **Preprocessing**:
-   - Normalize images appropriately
-   - Clean text data
-   - Handle missing values
-
-3. **Performance**:
-   - Use appropriate batch sizes
-   - Enable data loading optimization
-   - Cache preprocessed data when possible
-
-4. **Validation**:
-   - Check data distribution
-   - Verify label balance
-   - Monitor data quality
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Data Loading Errors**:
-   - Verify file paths
-   - Check CSV format
-   - Ensure all images exist
-
-2. **Memory Issues**:
-   - Reduce batch size
-   - Use data streaming
-   - Enable memory efficient loading
-
-3. **Performance Issues**:
-   - Increase num_workers
-   - Use appropriate image size
-   - Enable caching
+1.  **Data Organization**: Ensure your `datasets.json` file is in the root of your dataset directory and that all `image_path` entries are correct.
+2.  **Data Integrity**: Verify that your JSON is well-formed and that all required keys are present in each report object.
+3.  **Performance**: For very large datasets, consider splitting your `datasets.json` into separate train and validation files for faster initialization, though this would require a minor code modification.
 
 ## Next Steps
 
-- Learn about [model architecture](model_architecture.md)
-- Explore [training options](training.md)
-- Check [visualization tools](visualization.md) 
+-   Learn about the [model architecture](model_architecture.md).
+-   Explore the [training options](training.md).
+-   Check the [visualization tools](visualization.md). 

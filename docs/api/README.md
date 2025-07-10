@@ -1,49 +1,33 @@
 # API Reference
 
-This section provides detailed documentation for all modules and classes in the EVLMs framework.
+This section provides detailed documentation for the core modules and classes in the EVLMs framework.
 
 ## Core Modules
 
 ### Models
-- [ExplainableMedicalVLM](models/medical_vlm.md) - Main model class
-- [VisionEncoder](models/vision_encoder.md) - Vision encoder implementation
-- [LanguageDecoder](models/language_decoder.md) - Language decoder implementation
-- [CrossModalAttention](models/cross_attention.md) - Cross-modal attention mechanism
+-   `ExplainableMedicalVLM`: The main model that integrates all components.
+-   `MedicalVisionEncoder`: The vision encoder for processing images.
+-   `MedicalLanguageDecoder`: The language decoder for generating reports.
+-   `CrossModalAttention`: The attention mechanism for fusing vision and language features.
 
 ### Data
-- [MedicalImageTextDataset](data/dataset.md) - Dataset class
-- [DatasetConfig](data/config.md) - Dataset configuration
-- [Transforms](data/transforms.md) - Data augmentation and preprocessing
+-   `MedicalImageTextDataset`: The dataset class for loading data from a local `datasets.json` file.
+-   `DatasetConfig`: The configuration for specifying the dataset path.
 
 ### Training
-- [MedicalVLMTrainer](trainers/trainer.md) - Main trainer class
-- [Losses](trainers/losses.md) - Loss functions
-- [Metrics](trainers/metrics.md) - Evaluation metrics
-- [Optimizers](trainers/optimizers.md) - Optimization utilities
+-   `MedicalVLMTrainer`: The main trainer class that handles the training loop, optimization, and evaluation.
 
 ### Visualization
-- [ExplanationGenerator](visualization/explanation_generator.md) - Explanation generation
-- [GradCAMExplainer](visualization/gradcam.md) - GradCAM implementation
-- [AttentionVisualizer](visualization/attention.md) - Attention visualization
-- [FeatureVisualizer](visualization/features.md) - Feature visualization
+-   `ExplanationGenerator`: A class for generating visual explanations like GradCAM and attention maps.
 
 ### Configuration
-- [Config](config/config.md) - Configuration system
-- [DatasetConfig](config/dataset_config.md) - Dataset configuration
-- [ModelConfig](config/model_config.md) - Model configuration
-- [TrainingConfig](config/training_config.md) - Training configuration
-
-### Utilities
-- [Logger](utils/logger.md) - Logging utilities
-- [Metrics](utils/metrics.md) - Evaluation metrics
-- [Visualization](utils/visualization.md) - Visualization utilities
-- [IO](utils/io.md) - Input/output utilities
+-   `Config`: The main configuration class that holds settings for the model, trainer, and dataset.
 
 ## Class Reference
 
 ### ExplainableMedicalVLM
 
-Main model class for medical image analysis and explanation.
+The main model class for medical image analysis and explanation.
 
 ```python
 class ExplainableMedicalVLM(nn.Module):
@@ -55,21 +39,9 @@ class ExplainableMedicalVLM(nn.Module):
     )
 ```
 
-**Parameters**:
-- `vision_model` (str): Name or path of vision model
-- `language_model` (str): Name or path of language model
-- `num_classes` (int): Number of medical conditions
-
-**Methods**:
-- `forward()`: Forward pass
-- `predict()`: Make predictions
-- `explain()`: Generate explanations
-- `save()`: Save model
-- `load()`: Load model
-
 ### MedicalImageTextDataset
 
-Dataset class for medical images and text.
+Dataset class for loading medical images and text from a local `datasets.json` file.
 
 ```python
 class MedicalImageTextDataset(Dataset):
@@ -78,21 +50,9 @@ class MedicalImageTextDataset(Dataset):
         dataset_config: DatasetConfig,
         tokenizer: PreTrainedTokenizer,
         split: str = "train",
-        transform = None
+        transform=None
     )
 ```
-
-**Parameters**:
-- `dataset_config`: Dataset configuration
-- `tokenizer`: Text tokenizer
-- `split`: Data split
-- `transform`: Data transforms
-
-**Methods**:
-- `__len__()`: Get dataset size
-- `__getitem__()`: Get dataset item
-- `get_labels()`: Get label list
-- `get_splits()`: Get data splits
 
 ### MedicalVLMTrainer
 
@@ -102,45 +62,12 @@ Trainer class for model training.
 class MedicalVLMTrainer:
     def __init__(
         self,
-        model: ExplainableMedicalVLM,
-        train_loader: DataLoader,
-        val_loader: DataLoader,
-        **kwargs
+        model: nn.Module,
+        train_dataset: Any,
+        val_dataset: Any,
+        # ... other training parameters
     )
 ```
-
-**Parameters**:
-- `model`: Model instance
-- `train_loader`: Training data loader
-- `val_loader`: Validation data loader
-- `**kwargs`: Additional arguments
-
-**Methods**:
-- `train()`: Train model
-- `evaluate()`: Evaluate model
-- `save_checkpoint()`: Save checkpoint
-- `load_checkpoint()`: Load checkpoint
-
-### ExplanationGenerator
-
-Class for generating model explanations.
-
-```python
-class ExplanationGenerator:
-    def __init__(
-        self,
-        model: ExplainableMedicalVLM
-    )
-```
-
-**Parameters**:
-- `model`: Model instance
-
-**Methods**:
-- `explain()`: Generate explanation
-- `gradcam()`: Generate GradCAM
-- `attention()`: Get attention maps
-- `feature_importance()`: Get feature importance
 
 ## Configuration Reference
 
@@ -152,7 +79,6 @@ class Config:
     # Model settings
     vision_model_name: str
     language_model_name: str
-    num_classes: int
     
     # Training settings
     batch_size: int
@@ -160,8 +86,7 @@ class Config:
     num_epochs: int
     
     # Dataset settings
-    dataset_name: DatasetName
-    datasets: Dict[str, DatasetConfig]
+    dataset: Optional[DatasetConfig] = None
 ```
 
 ### DatasetConfig
@@ -169,66 +94,43 @@ class Config:
 ```python
 @dataclass
 class DatasetConfig:
-    name: DatasetName
     data_dir: str
-    train_csv: str
-    val_csv: str
-    test_csv: Optional[str]
-    image_column: str
-    text_column: str
-    label_columns: List[str]
+    json_filename: str = "datasets.json"
+    val_split: float = 0.2
+    label_columns: List[str] = field(default_factory=lambda: [...])
 ```
 
-## Usage Examples
+## Usage Example
 
 ### Training a Model
 
-```python
-from EVLMs.configs.config import get_config
-from EVLMs.models.medical_vlm import ExplainableMedicalVLM
-from EVLMs.trainers.trainer import MedicalVLMTrainer
+Training is initiated from the command line. See the [Getting Started](https://github.com/danjacobellis/ExplainableVisionLanguageModels-EVLMs/blob/main/docs/guides/getting_started.md) guide for details.
 
-# Get configuration
-config = get_config()
-
-# Create model
-model = ExplainableMedicalVLM(
-    vision_model=config.vision_model_name,
-    language_model=config.language_model_name,
-    num_classes=config.num_classes
-)
-
-# Create trainer
-trainer = MedicalVLMTrainer(
-    model=model,
-    train_loader=train_loader,
-    val_loader=val_loader
-)
-
-# Train model
-trainer.train()
+```bash
+python main.py --dataset_path /path/to/your/dataset
 ```
 
 ### Generating Explanations
 
 ```python
+from EVLMs.models.medical_vlm import ExplainableMedicalVLM
 from EVLMs.visualization.explanation_generator import ExplanationGenerator
+
+# Load your trained model
+model = ExplainableMedicalVLM(...)
+model.load_state_dict(torch.load('path/to/your/best_model.pth'))
 
 # Create explainer
 explainer = ExplanationGenerator(model)
 
 # Generate explanation
-explanation = explainer.explain(
-    image_path="image.jpg",
-    method="gradcam"
+explanation = explainer.generate_visual_explanation(
+    image_tensor, target_class=0
 )
-
-# Show explanation
-explanation.show()
 ```
 
 ## Next Steps
 
-- Check [example notebooks](../examples/README.md)
-- Read the [getting started guide](../guides/getting_started.md)
-- Learn about [model architecture](../guides/model_architecture.md) 
+-   Check the [Getting Started Guide](../guides/getting_started.md)
+-   Learn about the [Model Architecture](../guides/model_architecture.md)
+ 
