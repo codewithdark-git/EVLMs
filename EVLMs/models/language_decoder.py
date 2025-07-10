@@ -30,18 +30,18 @@ class MedicalLanguageDecoder(nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # # Quantization config for efficiency
-        # bnb_config = BitsAndBytesConfig(
-        #     load_in_4bit=True,
-        #     bnb_4bit_use_double_quant=True,
-        #     bnb_4bit_quant_type="nf4",
-        #     bnb_4bit_compute_dtype=torch.bfloat16
-        # )
+        # Quantization config for efficiency
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
         
         # Load language model
         self.language_model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            # quantization_config=bnb_config,
+            quantization_config=bnb_config,
             device_map="auto"
         )
         
@@ -113,11 +113,23 @@ class MedicalLanguageDecoder(nn.Module):
             )
             combined_attention = torch.cat([visual_attention, attention_mask], dim=1)
             
+            # Create labels for combined input
+            if labels is not None:
+                visual_labels = torch.full(
+                    (batch_size, visual_tokens.shape[1]),
+                    -100,  # Ignore index for loss calculation
+                    dtype=torch.long,
+                    device=labels.device
+                )
+                combined_labels = torch.cat([visual_labels, labels], dim=1)
+            else:
+                combined_labels = None
+
             # Forward pass through language model
             outputs = self.language_model(
                 inputs_embeds=combined_embeddings,
                 attention_mask=combined_attention,
-                labels=labels
+                labels=combined_labels
             )
             
             return {
