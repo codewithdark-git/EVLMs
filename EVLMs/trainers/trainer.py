@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional
 from EVLMs.utils.metrics import calculate_metrics, calculate_language_metrics
 from EVLMs.utils.logger import log_metrics
 
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 class MedicalVLMTrainer:
     """Trainer for medical vision-language model"""
@@ -45,7 +45,7 @@ class MedicalVLMTrainer:
         self.num_epochs = num_epochs
         self.output_dir = output_dir
         self.logger = logger or logging.getLogger(__name__)
-        self.scaler = GradScaler()
+        self.scaler = GradScaler('cuda')
         
         # Create data loaders
         self.train_loader = DataLoader(
@@ -100,7 +100,7 @@ class MedicalVLMTrainer:
                     for k, v in batch.items()}
             
             # Forward pass
-            with autocast():
+            with autocast('cuda'):
                 outputs = self.model(
                     images=batch['image'],
                     text_input_ids=batch['input_ids'],
