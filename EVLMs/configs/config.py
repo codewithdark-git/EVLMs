@@ -22,7 +22,7 @@ class DatasetConfig:
 class Config:
     # Model settings
     vision_model_name: str = 'microsoft/swin-base-patch4-window7-224'
-    language_model_name: str = 'microsoft/BioGPT'
+    language_model_name: str = 'meta-llama/Llama-3.2-1B'
     
     # Training settings
     batch_size: int = 8
