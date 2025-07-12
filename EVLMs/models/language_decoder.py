@@ -108,7 +108,8 @@ class MedicalLanguageDecoder(nn.Module):
             # Create attention mask for combined input
             visual_attention = torch.ones(
                 batch_size, visual_tokens.shape[1],
-                device=visual_tokens.device
+                device=visual_tokens.device,
+                dtype=attention_mask.dtype
             )
             combined_attention = torch.cat([visual_attention, attention_mask], dim=1)
             
