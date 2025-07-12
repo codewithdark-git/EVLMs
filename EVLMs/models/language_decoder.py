@@ -149,7 +149,8 @@ class MedicalLanguageDecoder(nn.Module):
                            max_length: int = 200,
                            num_beams: int = 4,
                            temperature: float = 0.7,
-                           top_p: float = 0.9) -> Dict[str, Any]:
+                           top_p: float = 0.9,
+                           prompt: str = "Findings: ") -> Dict[str, Any]:
         """
         Generate medical explanation from visual features
         
@@ -166,9 +167,18 @@ class MedicalLanguageDecoder(nn.Module):
         # Project visual features to language space
         visual_tokens = self.vision_projection(visual_features).to(self.language_model.dtype)
 
-        # Start with visual tokens as context
-        current_embeddings = visual_tokens
-        
+        # Encode prompt and get embeddings
+        prompt_encoding = self.tokenizer(
+            [prompt] * visual_features.shape[0],
+            return_tensors='pt',
+            padding=True
+        )
+        prompt_input_ids = prompt_encoding['input_ids'].to(visual_tokens.device)
+        prompt_embeddings = self.language_model.get_input_embeddings()(prompt_input_ids)
+
+        # Concatenate visual tokens and prompt embeddings
+        current_embeddings = torch.cat([visual_tokens, prompt_embeddings], dim=1)
+
         # Generate text using beam search
         outputs = self.language_model.generate(
             inputs_embeds=current_embeddings,
@@ -180,12 +190,12 @@ class MedicalLanguageDecoder(nn.Module):
             no_repeat_ngram_size=3,
             early_stopping=True
         )
-        
+
         # Decode generated tokens
         generated_text = self.tokenizer.batch_decode(
             outputs, skip_special_tokens=True
         )
-        
+
         return {
             'explanations': generated_text,
             'tokens': outputs

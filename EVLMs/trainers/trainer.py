@@ -253,21 +253,13 @@ class MedicalVLMTrainer:
         return metrics
     
     def save_checkpoint(self, metrics: Dict[str, float]):
-        """Save model checkpoint"""
-        checkpoint = {
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'metrics': metrics,
-            'global_step': self.global_step
-        }
-        
+        """Save only model weights to avoid disk errors"""
         checkpoint_path = os.path.join(
             self.output_dir,
             f'checkpoint_step_{self.global_step}.pt'
         )
-        torch.save(checkpoint, checkpoint_path)
-        self.logger.info(f"Saved checkpoint to {checkpoint_path}")
+        torch.save(self.model.state_dict(), checkpoint_path)
+        self.logger.info(f"Saved model weights to {checkpoint_path}")
     
     def train(self):
         """Complete training loop"""
