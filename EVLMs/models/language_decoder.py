@@ -43,7 +43,7 @@ class MedicalLanguageDecoder(nn.Module):
             nn.Linear(768, 1024),
             nn.GELU(),
             nn.LayerNorm(1024),
-            nn.Linear(1024, self.language_model.config.n_embd)
+            nn.Linear(1024, self.language_model.config.hidden_size)
         )
         
         # Medical knowledge embeddings
