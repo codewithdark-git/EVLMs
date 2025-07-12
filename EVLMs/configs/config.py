@@ -22,7 +22,7 @@ class DatasetConfig:
 class Config:
     # Model settings
     vision_model_name: str = 'microsoft/swin-base-patch4-window7-224'
-    language_model_name: str = 'microsoft/DialoGPT-medium'
+    language_model_name: str = 'microsoft/BioGPT'
     
     # Training settings
     batch_size: int = 8

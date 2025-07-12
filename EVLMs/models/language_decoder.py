@@ -9,7 +9,7 @@ class MedicalLanguageDecoder(nn.Module):
     """Language decoder for medical report generation"""
     
     def __init__(self,
-                 model_name: str = 'microsoft/DialoGPT-medium',
+                 model_name: str = 'microsoft/BioGPT',
                  vocab_size: int = 50257,
                  max_length: int = 512,
                  lora_r: int = 16,
@@ -29,20 +29,14 @@ class MedicalLanguageDecoder(nn.Module):
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        
-        # Quantization config for efficiency
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        
-        # Load language model
-        self.language_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=bnb_config
-        )
+
+        # Load language model (BioGPT)
+        self.language_model = AutoModelForCausalLM.from_pretrained(model_name)
+
+        # Freeze all LM layers except LM head
+        for name, param in self.language_model.named_parameters():
+            if 'lm_head' not in name:
+                param.requires_grad = False
         
         # Vision-to-text projection
         self.vision_projection = nn.Sequential(
