@@ -26,7 +26,7 @@ class Config:
     
     # Training settings
     batch_size: int = 8
-    learning_rate: float = 5e-5
+    learning_rate: float = 1e-6
     num_epochs: int = 10
     max_text_length: int = 512
     image_size: int = 224

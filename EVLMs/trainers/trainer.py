@@ -13,6 +13,8 @@ from typing import Dict, Any, Optional
 from EVLMs.utils.metrics import calculate_metrics, calculate_language_metrics
 from EVLMs.utils.logger import log_metrics
 
+from torch.cuda.amp import autocast, GradScaler
+
 class MedicalVLMTrainer:
     """Trainer for medical vision-language model"""
     
@@ -43,6 +45,7 @@ class MedicalVLMTrainer:
         self.num_epochs = num_epochs
         self.output_dir = output_dir
         self.logger = logger or logging.getLogger(__name__)
+        self.scaler = GradScaler()
         
         # Create data loaders
         self.train_loader = DataLoader(
@@ -97,21 +100,23 @@ class MedicalVLMTrainer:
                     for k, v in batch.items()}
             
             # Forward pass
-            outputs = self.model(
-                images=batch['image'],
-                text_input_ids=batch['input_ids'],
-                attention_mask=batch['attention_mask'],
-                labels=batch['labels'],
-                mode='train'
-            )
-            
-            loss = outputs['loss']
+            with autocast():
+                outputs = self.model(
+                    images=batch['image'],
+                    text_input_ids=batch['input_ids'],
+                    attention_mask=batch['attention_mask'],
+                    labels=batch['labels'],
+                    mode='train'
+                )
+                loss = outputs['loss']
             
             # Backward pass
             self.optimizer.zero_grad()
-            loss.backward()
+            self.scaler.scale(loss).backward()
+            self.scaler.unscale_(self.optimizer)
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-            self.optimizer.step()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
             self.scheduler.step()
             
             # Track losses
