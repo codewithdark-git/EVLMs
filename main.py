@@ -110,7 +110,7 @@ def main():
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         learning_rate=config.learning_rate,
-        batch_size=8,  # Reduced batch size
+        batch_size=4,  # Reduced batch size
         num_epochs=10,  # Reduced epochs for quick test
         device=device,
         output_dir=config.output_dir,
