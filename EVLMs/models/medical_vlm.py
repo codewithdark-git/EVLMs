@@ -26,12 +26,24 @@ class ExplainableMedicalVLM(nn.Module):
         # Initialize components
         self.vision_encoder = MedicalVisionEncoder(vision_model)
         self.language_decoder = MedicalLanguageDecoder(language_model)
-        self.cross_modal_attention = CrossModalAttention(hidden_dim=hidden_dim)
+        
+        vision_feature_dim = 768
+        language_feature_dim = self.language_decoder.language_model.config.n_embd
+
+        self.cross_modal_attention = CrossModalAttention(
+            visual_dim=vision_feature_dim,
+            text_dim=language_feature_dim,
+            hidden_dim=hidden_dim
+        )
         self.contrastive_learning = ContrastiveLearning()
         
+        # Projections for contrastive learning
+        self.vision_contrastive_proj = nn.Linear(vision_feature_dim, hidden_dim)
+        self.text_contrastive_proj = nn.Linear(language_feature_dim, hidden_dim)
+
         # Classification head for multi-task learning
         self.classifier = nn.Sequential(
-            nn.Linear(768, 512),
+            nn.Linear(vision_feature_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(512, num_classes)
@@ -104,9 +116,13 @@ class ExplainableMedicalVLM(nn.Module):
             )
             
             # 4. Contrastive loss
+            visual_for_contrastive = self.vision_contrastive_proj(visual_global)
+            text_for_contrastive = self.text_contrastive_proj(
+                cross_modal_outputs['text_output'].mean(dim=1)
+            )
             contrastive_loss, similarity = self.contrastive_learning(
-                visual_global,
-                cross_modal_outputs['text_output'].mean(dim=1)  # Global text features
+                visual_for_contrastive,
+                text_for_contrastive
             )
             
             # Combined loss
@@ -158,4 +174,4 @@ class ExplainableMedicalVLM(nn.Module):
                 'explanation': explanation_output['explanations'][0],
                 'visual_attention': visual_attention,
                 'cross_attention': explanation_output.get('cross_attention_weights', None)
-            } 
+            }
