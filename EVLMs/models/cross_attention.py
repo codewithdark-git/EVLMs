@@ -75,7 +75,7 @@ class CrossModalAttention(nn.Module):
         
         # Project to common space
         visual_proj = self.visual_proj(visual_features)
-        text_proj = self.text_proj(text_features)
+        text_proj = self.text_proj(text_features.to(self.text_proj.weight.dtype))
         
         # Visual attending to text
         visual_attended, visual_attention = self.cross_attention(
