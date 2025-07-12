@@ -31,6 +31,7 @@ def get_transforms(img_size: int, is_training: bool = True):
 
 import warnings
 warnings.filterwarnings("ignore", message="Mean of empty slice.")
+warnings.filterwarnings("ignore", message="The attention mask and the pad token id were not set.")
 
 def main():
     parser = argparse.ArgumentParser(description="Train an Explainable Medical VLM.")
@@ -88,6 +89,16 @@ def main():
         language_model=config.language_model_name,
         num_classes=config.num_classes
     ).to(device)
+
+    # Log model parameters
+    def count_parameters(m):
+        return sum(p.numel() for p in m.parameters() if p.requires_grad)
+
+    logger.info("--- Model Parameters ---")
+    logger.info(f"Vision Encoder: {count_parameters(model.vision_encoder) / 1e6:.2f}M")
+    logger.info(f"Language Decoder: {count_parameters(model.language_decoder) / 1e6:.2f}M")
+    logger.info(f"Total Trainable: {count_parameters(model) / 1e6:.2f}M")
+    logger.info("------------------------")
     
     # Initialize trainer
     trainer = MedicalVLMTrainer(

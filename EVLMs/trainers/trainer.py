@@ -89,6 +89,8 @@ class MedicalVLMTrainer:
         self.model.eval()
         sample = next(iter(self.val_loader))
         image = sample['image'].to(self.device)
+        true_text = sample['text'][0]
+
         with torch.no_grad():
             explanation = self.model(
                 images=image,
@@ -96,6 +98,7 @@ class MedicalVLMTrainer:
             )['explanations'][0]
         
         self.logger.info("--- Sample Generation ---")
+        self.logger.info(f"Ground Truth: {true_text}")
         self.logger.info(f"Generated Text: {explanation}")
         self.logger.info("-------------------------")
     
@@ -258,11 +261,14 @@ class MedicalVLMTrainer:
             val_metrics = self.validate()
             
             # Log metrics
-            self.logger.info(
-                f"Train Loss: {train_metrics['loss']:.4f}, "
-                f"Val Loss: {val_metrics['loss']:.4f}, "
-                f"Val AUC: {val_metrics['mean_auc']:.4f}"
-            )
+            self.logger.info(f"--- Epoch {epoch + 1}/{self.num_epochs} Summary ---")
+            self.logger.info(f"Train Loss: {train_metrics['loss']:.4f}")
+            self.logger.info(f"Val Loss: {val_metrics['loss']:.4f}")
+            self.logger.info(f"Val AUC: {val_metrics['mean_auc']:.4f}")
+            for k, v in val_metrics.items():
+                if 'language' in k:
+                    self.logger.info(f"Val {k.replace('language_', '').upper()}: {v:.4f}")
+            self.logger.info("---------------------------------")
             
             # Save if best model
             if val_metrics['loss'] < self.best_val_loss:
