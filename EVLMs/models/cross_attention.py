@@ -71,11 +71,15 @@ class CrossModalAttention(nn.Module):
                 text_output: Updated text features
                 cross_attention_weights: Cross-attention weights
         """
+        # Ensure consistent dtype to prevent NaN loss
+        text_features = text_features.float()
+        visual_features = visual_features.float()
+
         batch_size = visual_features.shape[0]
         
         # Project to common space
         visual_proj = self.visual_proj(visual_features)
-        text_proj = self.text_proj(text_features.to(self.text_proj.weight.dtype))
+        text_proj = self.text_proj(text_features)
         
         # Visual attending to text
         key_padding_mask = attention_mask.bool() if attention_mask is not None else None

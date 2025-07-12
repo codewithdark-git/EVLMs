@@ -145,15 +145,16 @@ class MedicalLanguageDecoder(nn.Module):
     
     @torch.no_grad()
     def generate_explanation(self,
-                           visual_tokens: torch.Tensor,
+                           visual_features: torch.Tensor,
                            max_length: int = 200,
                            num_beams: int = 4,
                            temperature: float = 0.7,
                            top_p: float = 0.9) -> Dict[str, Any]:
-        """Generate medical explanation from visual features
+        """
+        Generate medical explanation from visual features
         
         Args:
-            visual_tokens: Visual features in language space
+            visual_features: Visual features in language space
             max_length: Maximum generation length
             num_beams: Number of beams for beam search
             temperature: Sampling temperature
@@ -162,6 +163,9 @@ class MedicalLanguageDecoder(nn.Module):
         Returns:
             Dictionary containing generated text and metadata
         """
+        # Project visual features to language space
+        visual_tokens = self.vision_projection(visual_features).to(self.language_model.dtype)
+
         # Start with visual tokens as context
         current_embeddings = visual_tokens
         
