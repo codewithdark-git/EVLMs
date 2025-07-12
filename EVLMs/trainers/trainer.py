@@ -180,8 +180,6 @@ class MedicalVLMTrainer:
                     'train/language_loss': outputs['language_loss'].item(),
                     'train/contrastive_loss': outputs['contrastive_loss'].item(),
                     'train/learning_rate': self.scheduler.get_last_lr()[0]
-            # Log validation predictions (explanation, label, prediction)
-            self.log_validation_predictions(num_samples=5)
                 }
                 log_metrics(self.logger, metrics, self.global_step, prefix='Train')
         
