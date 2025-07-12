@@ -29,6 +29,9 @@ def get_transforms(img_size: int, is_training: bool = True):
             ToTensorV2()
         ])
 
+import warnings
+warnings.filterwarnings("ignore", message="Mean of empty slice.")
+
 def main():
     parser = argparse.ArgumentParser(description="Train an Explainable Medical VLM.")
     parser.add_argument("--dataset_path", type=str, required=True, 

@@ -83,6 +83,21 @@ class MedicalVLMTrainer:
         self.val_losses = []
         self.best_val_loss = float('inf')
         self.global_step = 0
+
+    def log_sample_generation(self):
+        """Log a sample of generated text to the console."""
+        self.model.eval()
+        sample = next(iter(self.val_loader))
+        image = sample['image'].to(self.device)
+        with torch.no_grad():
+            explanation = self.model(
+                images=image,
+                mode='explanation'
+            )['explanations'][0]
+        
+        self.logger.info("--- Sample Generation ---")
+        self.logger.info(f"Generated Text: {explanation}")
+        self.logger.info("-------------------------")
     
     def train_epoch(self) -> Dict[str, float]:
         """Train for one epoch"""
@@ -263,4 +278,7 @@ class MedicalVLMTrainer:
                     **{f'val/{k}': v for k, v in val_metrics.items()}
                 })
             except:
-                pass 
+                pass
+
+            # Show a sample of generated text
+            self.log_sample_generation() 

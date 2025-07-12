@@ -49,48 +49,41 @@ def calculate_metrics(predictions: torch.Tensor,
     
     return metrics
 
-def calculate_language_metrics(predictions: List[str], 
-                             references: List[str]) -> Dict[str, float]:
-    """Calculate language generation metrics
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from rouge_score import rouge_scorer
+from typing import List, Dict
+
+def calculate_language_metrics(generated: List[str], references: List[str]) -> Dict[str, float]:
+    """Calculate language generation metrics (BLEU and ROUGE)."""
     
-    Args:
-        predictions: List of generated text
-        references: List of reference text
+    # Use a smoothing function to avoid zero scores for short sentences
+    chencherry = SmoothingFunction().method1
+
+    bleu_scores = {
+        'bleu1': [], 'bleu2': [], 'bleu3': [], 'bleu4': []
+    }
     
-    Returns:
-        Dictionary containing metrics
-    """
-    try:
-        from rouge_score import rouge_scorer
-        from nltk.translate.bleu_score import sentence_bleu
-        import nltk
-        nltk.download('punkt', quiet=True)
-    except ImportError:
-        print("Please install rouge-score and nltk for language metrics")
-        return {}
-    
-    metrics = {}
+    for gen, ref in zip(generated, references):
+        ref_tokens = [ref.split()]
+        gen_tokens = gen.split()
+        
+        bleu_scores['bleu1'].append(sentence_bleu(ref_tokens, gen_tokens, weights=(1, 0, 0, 0), smoothing_function=chencherry))
+        bleu_scores['bleu2'].append(sentence_bleu(ref_tokens, gen_tokens, weights=(0, 1, 0, 0), smoothing_function=chencherry))
+        bleu_scores['bleu3'].append(sentence_bleu(ref_tokens, gen_tokens, weights=(0, 0, 1, 0), smoothing_function=chencherry))
+        bleu_scores['bleu4'].append(sentence_bleu(ref_tokens, gen_tokens, weights=(0, 0, 0, 1), smoothing_function=chencherry))
+
+    # Average BLEU scores
+    avg_bleu = {k: sum(v) / len(v) for k, v in bleu_scores.items()}
     
     # ROUGE scores
-    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-    rouge_scores = [scorer.score(pred, ref) for pred, ref in zip(predictions, references)]
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+    rouge_scores = {'rouge1': [], 'rougeL': []}
     
-    metrics['rouge1_f'] = np.mean([score['rouge1'].fmeasure for score in rouge_scores])
-    metrics['rouge2_f'] = np.mean([score['rouge2'].fmeasure for score in rouge_scores])
-    metrics['rougeL_f'] = np.mean([score['rougeL'].fmeasure for score in rouge_scores])
+    for gen, ref in zip(generated, references):
+        scores = scorer.score(ref, gen)
+        rouge_scores['rouge1'].append(scores['rouge1'].fmeasure)
+        rouge_scores['rougeL'].append(scores['rougeL'].fmeasure)
+        
+    avg_rouge = {k: sum(v) / len(v) for k, v in rouge_scores.items()}
     
-    # BLEU scores
-    bleu_scores = []
-    for pred, ref in zip(predictions, references):
-        pred_tokens = nltk.word_tokenize(pred.lower())
-        ref_tokens = nltk.word_tokenize(ref.lower())
-        try:
-            bleu = sentence_bleu([ref_tokens], pred_tokens)
-            bleu_scores.append(bleu)
-        except:
-            continue
-    
-    if bleu_scores:
-        metrics['bleu'] = np.mean(bleu_scores)
-    
-    return metrics 
+    return {**avg_bleu, **avg_rouge} 
