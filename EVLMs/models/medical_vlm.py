@@ -112,7 +112,7 @@ class ExplainableMedicalVLM(nn.Module):
             cross_modal_outputs = self.cross_modal_attention(
                 visual_features=visual_features,
                 text_features=language_outputs['hidden_states'][-1],
-                attention_mask=attention_mask
+                attention_mask=language_outputs['attention_mask']
             )
             
             # 4. Contrastive loss

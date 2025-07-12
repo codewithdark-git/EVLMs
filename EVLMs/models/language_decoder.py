@@ -136,7 +136,8 @@ class MedicalLanguageDecoder(nn.Module):
             return {
                 'loss': outputs.loss,
                 'logits': outputs.logits,
-                'hidden_states': outputs.hidden_states
+                'hidden_states': outputs.hidden_states,
+                'attention_mask': combined_attention
             }
         else:
             # Inference mode - autoregressive generation
