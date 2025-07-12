@@ -78,11 +78,15 @@ class CrossModalAttention(nn.Module):
         text_proj = self.text_proj(text_features.to(self.text_proj.weight.dtype))
         
         # Visual attending to text
+        key_padding_mask = attention_mask.bool() if attention_mask is not None else None
+        if key_padding_mask is not None:
+            key_padding_mask = ~key_padding_mask # Invert mask
+
         visual_attended, visual_attention = self.cross_attention(
             query=visual_proj,
             key=text_proj,
             value=text_proj,
-            key_padding_mask=attention_mask if attention_mask is not None else None
+            key_padding_mask=key_padding_mask
         )
         
         # Text attending to visual
