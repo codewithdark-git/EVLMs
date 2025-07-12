@@ -128,7 +128,8 @@ class MedicalLanguageDecoder(nn.Module):
             outputs = self.language_model(
                 inputs_embeds=combined_embeddings,
                 attention_mask=combined_attention,
-                labels=combined_labels
+                labels=combined_labels,
+                output_hidden_states=True
             )
             
             return {
