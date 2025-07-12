@@ -104,7 +104,7 @@ class DatasetConfig:
 
 ### Training a Model
 
-Training is initiated from the command line. See the [Getting Started](https://github.com/danjacobellis/ExplainableVisionLanguageModels-EVLMs/blob/main/docs/guides/getting_started.md) guide for details.
+Training is initiated from the command line. See the [Getting Started](https://github.com/codewithdark-git/ExplainableVisionLanguageModels-EVLMs/blob/main/docs/guides/getting_started.md) guide for details.
 
 ```bash
 python main.py --dataset_path /path/to/your/dataset

@@ -6,7 +6,7 @@ This guide will help you set up and start using the Explainable Vision-Language 
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/ExplainableVisionLanguageModels-EVLMs.git
+    git clone https://github.com/codewithdark-git/ExplainableVisionLanguageModels-EVLMs.git
     cd ExplainableVisionLanguageModels-EVLMs
     ```
 

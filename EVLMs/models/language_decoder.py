@@ -97,7 +97,7 @@ class MedicalLanguageDecoder(nn.Module):
         batch_size = visual_features.shape[0]
         
         # Project visual features to language space
-        visual_tokens = self.vision_projection(visual_features)  # [B, N, n_embd]
+        visual_tokens = self.vision_projection(visual_features).to(self.language_model.dtype)  # [B, N, n_embd]
         
         if text_input_ids is not None:
             # Training mode - teacher forcing
@@ -113,11 +113,23 @@ class MedicalLanguageDecoder(nn.Module):
             )
             combined_attention = torch.cat([visual_attention, attention_mask], dim=1)
             
+            # Create labels for combined input
+            if labels is not None:
+                visual_labels = torch.full(
+                    (batch_size, visual_tokens.shape[1]),
+                    -100,  # Ignore index for loss calculation
+                    dtype=torch.long,
+                    device=labels.device
+                )
+                combined_labels = torch.cat([visual_labels, labels], dim=1)
+            else:
+                combined_labels = None
+
             # Forward pass through language model
             outputs = self.language_model(
                 inputs_embeds=combined_embeddings,
                 attention_mask=combined_attention,
-                labels=labels
+                labels=combined_labels
             )
             
             return {
