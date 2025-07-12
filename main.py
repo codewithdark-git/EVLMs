@@ -90,15 +90,19 @@ def main():
         num_classes=config.num_classes
     ).to(device)
 
-    # Log model parameters
+    # Log model parameters (improved formatting)
     def count_parameters(m):
         return sum(p.numel() for p in m.parameters() if p.requires_grad)
 
-    logger.info("--- Model Parameters ---")
-    logger.info(f"Vision Encoder: {count_parameters(model.vision_encoder) / 1e6:.2f}M")
-    logger.info(f"Language Decoder: {count_parameters(model.language_decoder) / 1e6:.2f}M")
-    logger.info(f"Total Trainable: {count_parameters(model) / 1e6:.2f}M")
-    logger.info("------------------------")
+    vision_params = count_parameters(model.vision_encoder)
+    language_params = count_parameters(model.language_decoder)
+    total_params = count_parameters(model)
+
+    logger.info("\n========== Model Parameters ==========")
+    logger.info(f"Vision Encoder Parameters:    {vision_params:,} ({vision_params / 1e6:.2f}M)")
+    logger.info(f"Language Decoder Parameters: {language_params:,} ({language_params / 1e6:.2f}M)")
+    logger.info(f"Total Trainable Parameters:  {total_params:,} ({total_params / 1e6:.2f}M)")
+    logger.info("======================================\n")
     
     # Initialize trainer
     trainer = MedicalVLMTrainer(

@@ -16,6 +16,28 @@ from EVLMs.utils.logger import log_metrics
 from torch.amp import autocast, GradScaler
 
 class MedicalVLMTrainer:
+    def log_validation_predictions(self, num_samples: int = 5):
+        """Log predictions for a few validation samples after each epoch."""
+        self.model.eval()
+        count = 0
+        for batch in self.val_loader:
+            images = batch['image'].to(self.device)
+            labels = batch['labels']
+            texts = batch['text']
+            # Predict explanations
+            with torch.no_grad():
+                outputs = self.model(images=images, mode='explanation')
+                explanations = outputs['explanations']
+                # Predict labels
+                logits = self.model(images=images, mode='train')['logits']
+                preds = (torch.sigmoid(logits) > 0.5).cpu().numpy()
+            for i in range(len(images)):
+                if count >= num_samples:
+                    return
+                label_str = ', '.join([str(int(x)) for x in labels[i].cpu().numpy()])
+                pred_str = ', '.join([str(int(x)) for x in preds[i]])
+                self.logger.info(f"[VAL SAMPLE {count+1}]\n  Ground Truth Labels: {label_str}\n  Predicted Labels:   {pred_str}\n  Ground Truth Text:  {texts[i]}\n  Generated Explanation: {explanations[i]}\n-------------------------")
+                count += 1
     """Trainer for medical vision-language model"""
     
     def __init__(self,
@@ -158,6 +180,8 @@ class MedicalVLMTrainer:
                     'train/language_loss': outputs['language_loss'].item(),
                     'train/contrastive_loss': outputs['contrastive_loss'].item(),
                     'train/learning_rate': self.scheduler.get_last_lr()[0]
+            # Log validation predictions (explanation, label, prediction)
+            self.log_validation_predictions(num_samples=5)
                 }
                 log_metrics(self.logger, metrics, self.global_step, prefix='Train')
         
