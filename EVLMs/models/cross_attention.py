@@ -149,8 +149,8 @@ class ContrastiveLearning(nn.Module):
             similarity: Similarity matrix
         """
         # Normalize features
-        image_features = nn.functional.normalize(image_features, dim=-1)
-        text_features = nn.functional.normalize(text_features, dim=-1)
+        image_features = image_features / (torch.norm(image_features, p=2, dim=-1, keepdim=True) + 1e-8)
+        text_features = text_features / (torch.norm(text_features, p=2, dim=-1, keepdim=True) + 1e-8)
         
         # Compute similarity matrix
         similarity = torch.matmul(image_features, text_features.T) / self.temperature
