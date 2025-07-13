@@ -31,10 +31,7 @@ class MedicalLanguageDecoder(nn.Module):
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # Load Gemma language model with eager attention (recommended)
-        self.language_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            attn_implementation='eager'
-        )
+        self.language_model = AutoModelForCausalLM.from_pretrained(model_name)
 
         # Unfreeze last transformer block and LM head for better adaptation
         for name, param in self.language_model.named_parameters():
