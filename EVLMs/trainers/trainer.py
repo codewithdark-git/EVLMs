@@ -114,14 +114,15 @@ class MedicalVLMTrainer:
         true_text = sample['text'][0]
 
         with torch.no_grad():
-            explanation = self.model(
-                images=image,
-                mode='explanation'
-            )['explanations'][0]
+            output = self.model.explain(images=image)
         
         self.logger.info("--- Sample Generation ---")
         self.logger.info(f"Ground Truth: {true_text}")
-        self.logger.info(f"Generated Text: {explanation}")
+        self.logger.info(f"Labels: {sample['labels'][0].cpu().numpy()}")
+        self.logger.info(f"Generated Text: {output['explanations'][0]}")
+        self.logger.info(f"Generated Labels: {output['prediction'][0]}")
+        self.logger.info(f"Visual Attention: {output['visual_attention'][0]}")
+        self.logger.info(f"Cross Attention: {output.get('cross_attention', 'N/A')}")
         self.logger.info("-------------------------")
     
     def train_epoch(self) -> Dict[str, float]:
