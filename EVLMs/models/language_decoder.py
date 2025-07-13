@@ -30,12 +30,17 @@ class MedicalLanguageDecoder(nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        # Load Gemma language model
-        self.language_model = AutoModelForCausalLM.from_pretrained(model_name)
+        # Load Gemma language model with eager attention (recommended)
+        self.language_model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            attn_implementation='eager'
+        )
 
-        # Freeze all LM layers except LM head for fast adaptation
+        # Unfreeze last transformer block and LM head for better adaptation
         for name, param in self.language_model.named_parameters():
-            if 'lm_head' not in name:
+            if 'transformer.h.29' in name or 'lm_head' in name:  # For Gemma-3B, last block
+                param.requires_grad = True
+            else:
                 param.requires_grad = False
 
         # Vision-to-text projection (match Gemma hidden size)
@@ -172,22 +177,19 @@ class MedicalLanguageDecoder(nn.Module):
         # Concatenate visual tokens and prompt embeddings
         current_embeddings = torch.cat([visual_tokens, prompt_embeddings], dim=1)
 
-        # Generate text using beam search
+        # Generate text using greedy decoding for more stable output
         outputs = self.language_model.generate(
             inputs_embeds=current_embeddings,
             max_length=max_length,
-            num_beams=num_beams,
-            temperature=temperature,
-            top_p=top_p,
-            do_sample=True,
-            no_repeat_ngram_size=3,
+            num_beams=1,
+            do_sample=False,
             early_stopping=True
         )
 
-        # Decode generated tokens
-        generated_text = self.tokenizer.batch_decode(
-            outputs, skip_special_tokens=True
-        )
+        # Log generated token IDs for debugging
+        print("Generated token IDs:", outputs)
+        generated_text = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        print("Generated text:", generated_text)
 
         return {
             'explanations': generated_text,

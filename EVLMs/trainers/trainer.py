@@ -107,25 +107,30 @@ class MedicalVLMTrainer:
         self.global_step = 0
 
     def log_sample_generation(self):
-        """Log a sample of generated text to the console."""
+        """Log a sample of generated text, image, labels, and attention to the console."""
         self.model.eval()
         sample = next(iter(self.val_loader))
         image = sample['image'].to(self.device)
         true_text = sample['text'][0]
+        true_labels = sample['labels'][0].cpu().numpy()
+        label_names = getattr(self.val_loader.dataset, 'label_names', None)
 
         with torch.no_grad():
             output = self.model.explain(image=image)
-        # Convert logits to labels
-        if 'prediction' in output:
-            output['prediction'] = (torch.softmax(output['prediction'], dim=-1)).cpu().numpy()
+
+        # Predicted labels (thresholded)
+        pred_labels = (output['prediction'][0] > 0.5).cpu().numpy()
+        pred_label_names = [label_names[i] for i, v in enumerate(pred_labels) if v] if label_names is not None else pred_labels
+        true_label_names = [label_names[i] for i, v in enumerate(true_labels) if v] if label_names is not None else true_labels
 
         self.logger.info("--- Sample Generation ---")
-        self.logger.info(f"Ground Truth: {true_text}")
-        self.logger.info(f"Labels: {sample['labels'][0].cpu().numpy()}")
-        self.logger.info(f"Generated Text: {output['explanation'][0]}")
-        self.logger.info(f"Generated Labels: {output['prediction'][0]}")
-        self.logger.info(f"Visual Attention: {output['visual_attention'][0]}")
-        self.logger.info(f"Cross Attention: {output['cross_attention']}")
+        self.logger.info(f"Image shape: {image.shape}")
+        self.logger.info(f"Ground Truth Labels: {true_label_names}")
+        self.logger.info(f"Predicted Labels:   {pred_label_names}")
+        self.logger.info(f"Ground Truth Report: {true_text}")
+        self.logger.info(f"Generated Report:   {output['explanation']}")
+        self.logger.info(f"Visual Attention: {output['visual_attention']}")
+        self.logger.info(f"Cross Attention: {output.get('cross_attention', 'N/A')}")
         self.logger.info("-------------------------")
     
     def train_epoch(self) -> Dict[str, float]:
@@ -209,12 +214,9 @@ class MedicalVLMTrainer:
         all_generated_text = []
         all_reference_text = []
         
+        label_names = getattr(self.val_loader.dataset, 'label_names', None)
         for batch in tqdm(self.val_loader, desc="Validation"):
-            # Move to device
-            batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                    for k, v in batch.items()}
-            
-            # Forward pass
+            batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             outputs = self.model(
                 images=batch['image'],
                 text_input_ids=batch['input_ids'],
@@ -222,22 +224,29 @@ class MedicalVLMTrainer:
                 labels=batch['labels'],
                 mode='train'
             )
-            
             total_loss += outputs['loss'].item()
-            
-            # Collect predictions
             predictions = torch.sigmoid(outputs['logits'])
             all_predictions.append(predictions.cpu())
             all_labels.append(batch['labels'].cpu())
-            
-            # Generate text
+
             explanations = self.model(
                 images=batch['image'],
                 mode='explanation'
             )['explanations']
-            
             all_generated_text.extend(explanations)
             all_reference_text.extend(batch['text'])
+
+            # Log actual and predicted labels and reports for first sample in batch
+            pred_labels = (predictions[0] > 0.5).cpu().numpy()
+            true_labels = batch['labels'][0].cpu().numpy()
+            pred_label_names = [label_names[i] for i, v in enumerate(pred_labels) if v] if label_names is not None else pred_labels
+            true_label_names = [label_names[i] for i, v in enumerate(true_labels) if v] if label_names is not None else true_labels
+            self.logger.info("[VAL SAMPLE]")
+            self.logger.info(f"Ground Truth Labels: {true_label_names}")
+            self.logger.info(f"Predicted Labels:   {pred_label_names}")
+            self.logger.info(f"Ground Truth Report: {batch['text'][0]}")
+            self.logger.info(f"Generated Report:   {explanations[0]}")
+            self.logger.info("-------------------------")
         
         # Calculate metrics
         all_predictions = torch.cat(all_predictions)
