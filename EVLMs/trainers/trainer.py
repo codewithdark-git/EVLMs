@@ -119,10 +119,10 @@ class MedicalVLMTrainer:
         self.logger.info("--- Sample Generation ---")
         self.logger.info(f"Ground Truth: {true_text}")
         self.logger.info(f"Labels: {sample['labels'][0].cpu().numpy()}")
-        self.logger.info(f"Generated Text: {output['explanations'][0]}")
+        self.logger.info(f"Generated Text: {output['explanation'][0]}")
         self.logger.info(f"Generated Labels: {output['prediction'][0]}")
         self.logger.info(f"Visual Attention: {output['visual_attention'][0]}")
-        self.logger.info(f"Cross Attention: {output.get('cross_attention', 'N/A')}")
+        self.logger.info(f"Cross Attention: {output['cross_attention'][0]}")
         self.logger.info("-------------------------")
     
     def train_epoch(self) -> Dict[str, float]:
