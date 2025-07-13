@@ -28,7 +28,7 @@ class ExplainableMedicalVLM(nn.Module):
         self.language_decoder = MedicalLanguageDecoder(language_model)
         
         vision_feature_dim = 768
-        language_feature_dim = self.language_decoder.language_model.config.n_embd
+        language_feature_dim = self.language_decoder.language_model.config.hidden_size
 
         self.cross_modal_attention = CrossModalAttention(
             visual_dim=vision_feature_dim,

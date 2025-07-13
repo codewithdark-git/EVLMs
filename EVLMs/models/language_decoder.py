@@ -9,8 +9,8 @@ class MedicalLanguageDecoder(nn.Module):
     """Language decoder for medical report generation"""
     
     def __init__(self,
-                 model_name: str = 'microsoft/BioGPT',
-                 vocab_size: int = 50257,
+                 model_name: str = 'google/gemma-3-1b-pt',
+                 vocab_size: int = 262144,  # Gemma-3B vocab size
                  max_length: int = 512,
                  lora_r: int = 16,
                  lora_alpha: int = 32,
@@ -26,39 +26,38 @@ class MedicalLanguageDecoder(nn.Module):
         """
         super().__init__()
         
-        # Load tokenizer
+        # Load tokenizer for Gemma
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        # Load language model (BioGPT)
+        # Load Gemma language model
         self.language_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-        # Freeze all LM layers except LM head
+        # Freeze all LM layers except LM head for fast adaptation
         for name, param in self.language_model.named_parameters():
             if 'lm_head' not in name:
                 param.requires_grad = False
-        
-        # Vision-to-text projection
+
+        # Vision-to-text projection (match Gemma hidden size)
         self.vision_projection = nn.Sequential(
             nn.Linear(768, 1024),
             nn.GELU(),
             nn.LayerNorm(1024),
             nn.Linear(1024, self.language_model.config.hidden_size)
         )
-        
+
         # Medical knowledge embeddings
-        self.medical_embeddings = self._init_medical_embeddings()
-        
-        # LoRA for efficient fine-tuning
+        self.medical_embeddings = self._init_medical_embeddings(vocab_size)
+
+        # LoRA for efficient fine-tuning (Gemma compatible)
         lora_config = LoraConfig(
             r=lora_r,
             lora_alpha=lora_alpha,
-            target_modules=["c_attn", "c_proj"],
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Gemma uses these
             lora_dropout=lora_dropout,
             bias="none",
             task_type="CAUSAL_LM"
         )
-        
         self.language_model = get_peft_model(self.language_model, lora_config)
     
     def _init_medical_embeddings(self, vocab_size: int = 10000) -> nn.Embedding:
