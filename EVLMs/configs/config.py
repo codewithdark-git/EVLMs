@@ -31,7 +31,7 @@ class Config:
     max_text_length: int = 512
     image_size: int = 224
     warmup_steps: int = 1000
-    gradient_accumulation_steps: int = 1
+    gradient_accumulation_steps: int = 4
     weight_decay: float = 0.01
     
     # Dataset settings
