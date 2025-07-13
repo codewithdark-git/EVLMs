@@ -102,7 +102,7 @@ def main():
     logger.info(f"Vision Encoder Parameters:    {vision_params:,} ({vision_params / 1e6:.2f}M)")
     logger.info(f"Language Decoder Parameters: {language_params:,} ({language_params / 1e6:.2f}M)")
     logger.info(f"Total Trainable Parameters:  {total_params:,} ({total_params / 1e6:.2f}M)")
-    logger.info("======================================\n")
+    logger.info("\n=================  =====================\n")
     
     # Initialize trainer
     trainer = MedicalVLMTrainer(

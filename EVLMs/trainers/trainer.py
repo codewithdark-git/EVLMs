@@ -114,7 +114,7 @@ class MedicalVLMTrainer:
         true_text = sample['text'][0]
 
         with torch.no_grad():
-            output = self.model.explain(images=image)
+            output = self.model.explain(image=image)
         
         self.logger.info("--- Sample Generation ---")
         self.logger.info(f"Ground Truth: {true_text}")
