@@ -30,14 +30,12 @@ class MedicalLanguageDecoder(nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        # Load Gemma language model with eager attention (recommended)
-        self.language_model = AutoModelForCausalLM.from_pretrained(
-            model_name
-        )
+        # Load Gemma language model
+        self.language_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-        # Unfreeze last transformer block and LM head for better adaptation
+        # Freeze all LM layers except LM head for fast adaptation
         for name, param in self.language_model.named_parameters():
-            if 'lm_head' in name:  # For Gemma-3B, last block
+            if 'lm_head' not in name:
                 param.requires_grad = False
 
         # Vision-to-text projection (match Gemma hidden size)
@@ -174,19 +172,22 @@ class MedicalLanguageDecoder(nn.Module):
         # Concatenate visual tokens and prompt embeddings
         current_embeddings = torch.cat([visual_tokens, prompt_embeddings], dim=1)
 
-        # Generate text using greedy decoding for more stable output
+        # Generate text using beam search
         outputs = self.language_model.generate(
             inputs_embeds=current_embeddings,
             max_length=max_length,
-            num_beams=1,
-            do_sample=False,
+            num_beams=num_beams,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=True,
+            no_repeat_ngram_size=3,
             early_stopping=True
         )
 
-        # Log generated token IDs for debugging
-        print("Generated token IDs:", outputs)
-        generated_text = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        print("Generated text:", generated_text)
+        # Decode generated tokens
+        generated_text = self.tokenizer.batch_decode(
+            outputs, skip_special_tokens=True
+        )
 
         return {
             'explanations': generated_text,
