@@ -32,16 +32,13 @@ class MedicalLanguageDecoder(nn.Module):
 
         # Load Gemma language model with eager attention (recommended)
         self.language_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            attn_implementation='eager'
+            model_name
         )
 
         # Unfreeze last transformer block and LM head for better adaptation
         for name, param in self.language_model.named_parameters():
             if 'lm_head' in name:  # For Gemma-3B, last block
                 param.requires_grad = True
-            else:
-                param.requires_grad = False
 
         # Vision-to-text projection (match Gemma hidden size)
         self.vision_projection = nn.Sequential(
