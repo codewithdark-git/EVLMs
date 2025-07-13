@@ -22,7 +22,7 @@ class DatasetConfig:
 class Config:
     # Model settings
     vision_model_name: str = 'microsoft/swin-base-patch4-window7-224'
-    language_model_name: str = 'meta-llama/Llama-3.2-1B'
+    language_model_name: str = 'google/gemma-3-1b-pt'
     
     # Training settings
     batch_size: int = 8
@@ -31,7 +31,7 @@ class Config:
     max_text_length: int = 512
     image_size: int = 224
     warmup_steps: int = 1000
-    gradient_accumulation_steps: int = 1
+    gradient_accumulation_steps: int = 4
     weight_decay: float = 0.01
     
     # Dataset settings
