@@ -115,14 +115,17 @@ class MedicalVLMTrainer:
 
         with torch.no_grad():
             output = self.model.explain(image=image)
-        
+        # Convert logits to labels
+        if 'prediction' in output:
+            output['prediction'] = (torch.softmax(output['prediction'], dim=-1)).cpu().numpy()
+
         self.logger.info("--- Sample Generation ---")
         self.logger.info(f"Ground Truth: {true_text}")
         self.logger.info(f"Labels: {sample['labels'][0].cpu().numpy()}")
         self.logger.info(f"Generated Text: {output['explanation'][0]}")
         self.logger.info(f"Generated Labels: {output['prediction'][0]}")
         self.logger.info(f"Visual Attention: {output['visual_attention'][0]}")
-        self.logger.info(f"Cross Attention: {output['cross_attention'][0]}")
+        self.logger.info(f"Cross Attention: {output['cross_attention']}")
         self.logger.info("-------------------------")
     
     def train_epoch(self) -> Dict[str, float]:
