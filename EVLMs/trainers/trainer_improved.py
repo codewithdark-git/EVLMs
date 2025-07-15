@@ -6,9 +6,9 @@ from torch.optim import AdamW, SGD
 from torch.optim.lr_scheduler import (
     CosineAnnealingLR, 
     ReduceLROnPlateau, 
-    OneCycleLR,
-    get_linear_schedule_with_warmup
+    OneCycleLR
 )
+from transformers import get_linear_schedule_with_warmup
 import wandb
 from tqdm import tqdm
 import logging
